@@ -1,0 +1,158 @@
+<html>
+<head>
+    <style type="text/css">
+        [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak, .ng-hide:not(.ng-hide-animate) {
+            display: none !important;
+        }
+
+        ng\:form {
+            display: block;
+        }
+
+        .ng-animate-shim {
+            visibility: hidden;
+        }
+
+        .ng-anchor {
+            position: absolute;
+        }</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenRASP 官方测试用例集合</title>
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" media="screen">
+    <script src="https://cdn.bootcss.com/angular.js/1.6.3/angular.min.js" charset="utf-8"></script>
+    <style media="screen">
+        thead tr td {
+            background-color: #f1f1f1
+        }
+    </style>
+</head>
+
+<body>
+<div ng-app="myapp" ng-controller="main" class="ng-scope">
+    <div class="container" id="main">
+        <div class="row">
+            <div class="col-xs-12 col-sm-8 col-sm-offset-2">
+                <h3 class="text-center">OpenRASP 官方测试用例集合</h3>
+                <br>
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <td>测试用例</td>
+                        <td>用例路径</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">001 - 使用 File.listFiles 遍历目录（有路径拼接）</td>
+                        <td><a target="_blank" ng-href="static/001-dir-1.html" class="ng-binding"
+                               href="static/001-dir-1.html">001-dir-1.html</a>
+                        </td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">001 - 使用 File.listFiles 遍历目录（无路径拼接）</td>
+                        <td><a target="_blank" ng-href="static/001-dir-2.html" class="ng-binding"
+                               href="static/001-dir-2.html">static/001-dir-2.html</a>
+                        </td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">002 - 任意文件下载/读取漏洞（路径拼接）</td>
+                        <td><a target="_blank" ng-href="static/002-file-read.html" class="ng-binding"
+                               href="static/002-file-read.html">002-file-read.html</a>
+                        </td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">004 - 命令执行后门 - 无回显</td>
+                        <td><a target="_blank" ng-href="static/004-command-1.html" class="ng-binding"
+                               href="static/004-command-1.html">004-command-1.html</a>
+                        </td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">004 - 命令执行后门 - 带回显</td>
+                        <td><a target="_blank" ng-href="static/004-command-2.html" class="ng-binding"
+                               href="static/004-command-2.html">004-command-2.html</a>
+                        </td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">005 - 任意文件写入</td>
+                        <td><a target="_blank" ng-href="static/005-file-write.html" class="ng-binding"
+                               href="static/005-file-write.html">005-file-write.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">006 - Log4j 打印敏感信息到日志文件</td>
+                        <td><a target="_blank" ng-href="static/006-log.html" class="ng-binding"
+                               href="static/006-log.html">006-log.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">007 - 通过XXE读取系统文件</td>
+                        <td><a target="_blank" ng-href="static/007-xxe.html" class="ng-binding"
+                               href="static/007-xxe.html">007-xxe.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">008 - 任意文件上传漏洞 - commons.io 方式</td>
+                        <td><a target="_blank" ng-href="static/008-file-upload.html" class="ng-binding"
+                               href="static/008-file-upload.html">008-file-upload.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">009 - Transformer 反序列化</td>
+                        <td><a target="_blank" ng-href="static/009-deserialize.html" class="ng-binding"
+                               href="static/009-deserialize.html">009-deserialize.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">010 - JSTL import 任意文件包含/SSRF</td>
+                        <td><a target="_blank" ng-href="static/010-jstl-import.html" class="ng-binding"
+                               href="static/010-jstl-import.html">010-jstl-import.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">011 - SSRF - commons.httpclient 方式</td>
+                        <td><a target="_blank" ng-href="static/011-ssrf-commons-httpclient.html" class="ng-binding"
+                               href="static/011-ssrf-commons-httpclient.html">011-ssrf-commons-httpclient.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">011 - SSRF - HttpClient 方式</td>
+                        <td><a target="_blank" ng-href="static/011-ssrf-httpclient.html" class="ng-binding"
+                               href="static/011-ssrf-httpclient.html">011-ssrf-httpclient.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">011 - SSRF - URL.openConnection 方式</td>
+                        <td><a target="_blank" ng-href="static/011-ssrf-urlconnection.html" class="ng-binding"
+                               href="static/011-ssrf-urlconnection.html">011-ssrf-urlconnection.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">011 - SSRF - OKHTTP 方式</td>
+                        <td><a target="_blank" ng-href="static/011-ssrf-okhttp.html" class="ng-binding"
+                               href="static/011-ssrf-okhttp.html">011-ssrf-okhttp.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">011 - SSRF - OKHTTP3 方式</td>
+                        <td><a target="_blank" ng-href="static/011-ssrf-okhttp3.html" class="ng-binding"
+                               href="static/011-ssrf-okhttp3.html">011-ssrf-okhttp3.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">012 - SQLi - MySQL JDBC executeQuery 方式</td>
+                        <td><a target="_blank" ng-href="static/012-jdbc-mysql.html" class="ng-binding"
+                               href="static/012-jdbc-mysql.html">012-jdbc-mysql.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">013 - SQLi - JDBC multipart 请求格式</td>
+                        <td><a target="_blank" ng-href="static/013-multipart-mysql.html" class="ng-binding"
+                               href="static/013-multipart-mysql.html">013-multipart-mysql.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    <tr ng-repeat="a in testcases" class="ng-scope">
+                        <td class="ng-binding">017 - XSS - 017 - 反射型XSS</td>
+                        <td><a target="_blank" ng-href="static/017-xss.html" class="ng-binding"
+                               href="static/017-xss.html">017-xss.html</a></td>
+                    </tr><!-- end ngRepeat: a in testcases -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- design, implemented by c0debreak -->
+
+
+</html>

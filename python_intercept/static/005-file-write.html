@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>	
+	<meta charset="UTF-8"/>
+	<title>005 任意文件写入</title>
+</head>
+<body>
+
+<p>正常调用</p>
+<p>curl '<a href="/writefile" target="_blank"><%=request.getRequestURL()+normal_querystring%></a>'</p>
+<p>不正常调用</p>
+<p>curl '<a href="/writefile>" target="_blank"><%=request.getRequestURL()+linux_querystring%></a>'</p>
+</body>
+</html>
