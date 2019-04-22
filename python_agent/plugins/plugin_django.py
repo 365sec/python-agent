@@ -12,10 +12,10 @@ from functools import (
 from hashlib import sha1
 import types
 
-from immunio.compat import string_types, to_bytes, get_iteritems, integer_types
-from immunio.logger import log
-from immunio.patcher import monkeypatch
-from immunio.context import get_context
+from python_agent.compat import string_types, to_bytes, get_iteritems, integer_types
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
+from python_agent.context import get_context
 
 from . import FAILED, LOADED
 
@@ -105,9 +105,9 @@ def hook_get_wsgi_application(run_hook, get_agent_func, timer):
 
             # Get the WSGI app
             app = orig(*args, **kwargs)
-            # Get or create the Immunio Agent singleton
+            # Get or create the python_agent Agent singleton
             agent = get_agent_func()
-            # Wrap the WSGI app object with Immunio.
+            # Wrap the WSGI app object with python_agent.
             app = agent.wrap_wsgi_app(app)
 
             return app
@@ -128,7 +128,7 @@ def hook_get_params(run_hook, timer):
             try:
                 return WSGIRequest._get_get(self, *args, **kwargs)
             finally:
-                if not getattr(self, '_immunio_hook_called', None):
+                if not getattr(self, '_python_agent_hook_called', None):
                     if hasattr(self._get, 'lists'):
                         value = dict(self._get.lists())
                     else:
@@ -137,7 +137,7 @@ def hook_get_params(run_hook, timer):
                         run_hook("framework_input_params", {
                             "params": value,
                         })
-                    setattr(self, '_immunio_hook_called', True)
+                    setattr(self, '_python_agent_hook_called', True)
 
         WSGIRequest.GET = property(_new_get_get, WSGIRequest.GET.fset)
     elif isinstance(WSGIRequest.GET, cached_property):
@@ -154,13 +154,13 @@ def hook_get_params(run_hook, timer):
             """
             def __init__(self, orig):
                 self.__doc__ = getattr(orig, "__doc__", None)
-                self.__immunio_orig = orig
+                self.__python_agent_orig = orig
 
             def __get__(self, instance, type=None):
                 if instance is None:
                     return self
 
-                value = self.__immunio_orig.__get__(instance, type)
+                value = self.__python_agent_orig.__get__(instance, type)
                 if hasattr(value, 'lists'):
                     run_hook("framework_input_params", {
                         "params": dict(value.lists()),
@@ -739,7 +739,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
 
     def arg_to_str(arg):
         if isinstance(arg, Q):
-            return arg._immunio_str()
+            return arg._python_agent_str()
         else:
             return str(type(arg))
 
@@ -758,7 +758,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
         def __init__(orig, self, *args, **kwargs):
             log.debug("QuerySet.__init__()")
 
-            self._immunio_path = []
+            self._python_agent_path = []
             model = None
             if len(args):
                 model = args[0]
@@ -774,7 +774,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
                     except AttributeError:
                         model_str = "Unknown"
 
-                self._immunio_path.append("{0}.__init__({1})".format(
+                self._python_agent_path.append("{0}.__init__({1})".format(
                     self.__class__.__name__, model_str))
 
             # If query and using still results in F+ they may have to
@@ -791,9 +791,9 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
             log.debug("QuerySet._clone()")
 
             clone = orig(self, *args, **kwargs)
-            if not hasattr(self, "_immunio_path"):
-                self._immunio_path = []
-            clone._immunio_path.extend(self._immunio_path[:])
+            if not hasattr(self, "_python_agent_path"):
+                self._python_agent_path = []
+            clone._python_agent_path.extend(self._python_agent_path[:])
             return clone
 
     ####################################
@@ -809,7 +809,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
             if get_agent_func:
                 agent = get_agent_func()
                 with agent.property_set("QuerySet_calls",
-                                        self._immunio_path):
+                                        self._python_agent_path):
                     generator = orig(self, *args, **kwargs)
                     if not isinstance(generator, types.GeneratorType):
                         generator = (v for v in generator)
@@ -818,7 +818,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
                 # StopIteration will escape this loop
                 while True:
                     with agent.property_set("QuerySet_calls",
-                                            self._immunio_path):
+                                            self._python_agent_path):
                         next_value = next(generator)
                     yield next_value
             else:
@@ -859,14 +859,14 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
 
             if get_agent_func:
                 method_sig = make_method_sig(method_name, args, kwargs)
-                self._immunio_path.append(method_sig)
+                self._python_agent_path.append(method_sig)
                 try:
                     agent = get_agent_func()
                     with agent.property_set("QuerySet_calls",
-                                            self._immunio_path):
+                                            self._python_agent_path):
                         return orig(self, *args, **kwargs)
                 finally:
-                    self._immunio_path.pop()
+                    self._python_agent_path.pop()
 
             else:
                 return orig(self, *args, **kwargs)
@@ -893,14 +893,14 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
                 else:
                     real_values = []
                 method_sig = make_method_sig("_update", real_values, {})
-                self._immunio_path.append(method_sig)
+                self._python_agent_path.append(method_sig)
                 try:
                     agent = get_agent_func()
                     with agent.property_set("QuerySet_calls",
-                                            self._immunio_path):
+                                            self._python_agent_path):
                         return orig(self, values)
                 finally:
-                    self._immunio_path.pop()
+                    self._python_agent_path.pop()
 
             else:
                 return orig(self, values)
@@ -936,7 +936,7 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
             qs = orig(self, *args, **kwargs)
 
             method_sig = make_method_sig(method_name, args, kwargs)
-            qs._immunio_path.append(method_sig)
+            qs._python_agent_path.append(method_sig)
             return qs
 
     for method in alter_methods:
@@ -979,13 +979,13 @@ def _hook_queryset_class(get_agent_func, timer, klass, Q):
                 stop = True
 
             get_path = "__getitem__({0},{1})".format(start, stop)
-            with agent.property_set("QuerySet_calls", (self._immunio_path +
+            with agent.property_set("QuerySet_calls", (self._python_agent_path +
                                                        [get_path])):
                 result = orig(self, k)
 
             # Anything that's a QS will have this:
-            if hasattr(result, "_immunio_path"):
-                result._immunio_path.append(get_path)
+            if hasattr(result, "_python_agent_path"):
+                result._python_agent_path.append(get_path)
             return result
 
 
@@ -1047,12 +1047,12 @@ def hook_fields(get_agent_func, timer):
         if get_agent_func:
             agent = get_agent_func()
             cm = agent.property_set("FieldSig", field_sig)
-            instance._immunio_exit = cm.__exit__
+            instance._python_agent_exit = cm.__exit__
 
     @receiver(post_save, weak=False)
     def _unset_fields(sender, instance, *args, **kwargs):
-        if hasattr(instance, '_immunio_exit'):
-            instance._immunio_exit(None, None, None)
+        if hasattr(instance, '_python_agent_exit'):
+            instance._python_agent_exit(None, None, None)
 
 
 def hook_Q(get_agent_func, timer):
@@ -1069,11 +1069,11 @@ def hook_Q(get_agent_func, timer):
     import django.db.models
     from django.db.models import Q
 
-    def _immunio_str(self):
+    def _python_agent_str(self):
         children_str = []
         for child in self.children:
             if isinstance(child, django.db.models.Q):
-                children_str.append(child._immunio_str())
+                children_str.append(child._python_agent_str())
             elif isinstance(child, tuple):
                 k, v = child
                 children_str.append("({0}, {1})".format(k, type(v)))
@@ -1084,7 +1084,7 @@ def hook_Q(get_agent_func, timer):
                                             ", ".join(children_str))
         else:
             return '({0}: {1}'.format(self.connector, ", ".join(children_str))
-    Q._immunio_str = _immunio_str
+    Q._python_agent_str = _python_agent_str
 
 
 def hook_get_response(run_hook, timer):
@@ -1104,7 +1104,7 @@ def hook_get_response(run_hook, timer):
     def __init__(orig, self, url, *args, **kwargs):
         result = orig(self, url, *args, **kwargs)
 
-        _, self._immunio_loose_context, self._immunio_stack = get_context()
+        _, self._python_agent_loose_context, self._python_agent_stack = get_context()
         return result
 
     @monkeypatch(BaseHandler, "get_response", timer=timer,
@@ -1114,8 +1114,8 @@ def hook_get_response(run_hook, timer):
 
         response = orig(self, *args, **kwargs)
         if isinstance(response, HttpResponseRedirectBase):
-            loose_context = response._immunio_loose_context
-            stack = response._immunio_stack
+            loose_context = response._python_agent_loose_context
+            stack = response._python_agent_stack
             run_hook("framework_redirect", {
                 "context_key": loose_context,
                 "stack": stack,

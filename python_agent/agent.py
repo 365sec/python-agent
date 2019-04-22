@@ -11,20 +11,20 @@ import platform
 import uuid
 import socket
 
-from immunio import wsgi
-from immunio.exceptions import (
-    ImmunioBlockedError,
-    ImmunioOverrideResponse,
+from python_agent import wsgi
+from python_agent.exceptions import (
+    python_agentBlockedError,
+    python_agentOverrideResponse,
 )
-from immunio.logger import log
-from immunio.deps.python_ifcfg import ifcfg
-from immunio.util import DummyContext
-from immunio.libagent import LibAgent
+from python_agent.logger import log
+from python_agent.deps.python_ifcfg import ifcfg
+from python_agent.util import DummyContext
+from python_agent.libagent import LibAgent
 
 ##############################################################################
 # Import the module-level helper methods from `python_agent` to maintain the legacy
 # `python_agent.agent` namespace calls.
-from immunio import (  # pylint: disable=unused-import
+from python_agent import (  # pylint: disable=unused-import
     report_custom_threat,
     report_failed_login_attempt,
     start,
@@ -118,7 +118,7 @@ class AgentRequestStoreContext():
 
 class Agent(object):
     """
-    Manages all aspects of Immunio on a target webserver. There should only
+    Manages all aspects of python_agent on a target webserver. There should only
     be a single instance of this class for each webserver process.
     """
 
@@ -130,7 +130,7 @@ class Agent(object):
         self.environment = collect_environment()
 
         # Flag to indicate if we have received and processed all initial rules
-        # from the Immunio servers.
+        # from the python_agent servers.
         self.ready = False
 
         # Create thread-local storage for maintaining the active request_id
@@ -186,7 +186,7 @@ class Agent(object):
         # Don't wrap again if we've already wrapped once.
         if isinstance(app, wsgi.WsgiWrapper):
             log.warn("The WSGI app callable has already been wrapped by "
-                     "Immunio. Immunio will operate normally, but you can "
+                     "python_agent. python_agent will operate normally, but you can "
                      "remove the explict call to `agent.wrap_wsgi_app()`. "
                      "Please contact support@immun.io for more information.")
             return app
@@ -300,11 +300,11 @@ class Agent(object):
         # Check if request should be blocked
         if not result.get("allow", True):
             # request should be blocked
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         # Check if response should be overridden
         if result.get("override_status") or result.get("override_body"):
-            raise ImmunioOverrideResponse(
+            raise python_agentOverrideResponse(
                 int(result.get("override_status", 200)),
                 [list(x) for x in result.get("override_headers", [])],
                 result.get("override_body", ""),

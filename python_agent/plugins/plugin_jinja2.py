@@ -15,14 +15,14 @@ import os
 import pkg_resources
 import re
 
-from immunio import __version__
-from immunio.compat import to_bytes
-from immunio.logger import log
-from immunio.patcher import monkeypatch
-from immunio.util import DummyContext
+from python_agent import __version__
+from python_agent.compat import to_bytes
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
+from python_agent.util import DummyContext
 
 
-# Match Immunio placeholders like {python_agent-var:0:1234}
+# Match python_agent placeholders like {python_agent-var:0:1234}
 PLACEHOLDER_REGEX = re.compile(r"\{\/?python_agent-var:[0-9]+:[0-9a-fA-F]{4}\}")
 
 
@@ -56,7 +56,7 @@ def add_hooks(run_hook, get_agent_func=None, timer=None):
 
 
     # Add our custom parser node
-    add_immunio_var_node(timer)
+    add_python_agent_var_node(timer)
     # Hook the template parse and compile stages
     add_compiler_hooks(timer, xss_disabled)
     # Hook the actual rendering
@@ -65,7 +65,7 @@ def add_hooks(run_hook, get_agent_func=None, timer=None):
     return meta
 
 
-def add_immunio_var_node(timer):
+def add_python_agent_var_node(timer):
     """
     Adds a new Node type to Jinja2's parser.
 
@@ -78,7 +78,7 @@ def add_immunio_var_node(timer):
     import jinja2.nodes
 
     @monkeypatch("jinja2.nodes.NodeType.__new__", timer=timer,
-                 report_name="plugin.jinja2.setup.new_immunio_node")
+                 report_name="plugin.jinja2.setup.new_python_agent_node")
     def _copy_of_real_new(orig, cls, name, bases, d):
         """
         This is an exact copy of the `__new__()` method of
@@ -95,20 +95,20 @@ def add_immunio_var_node(timer):
         return type.__new__(cls, name, bases, d)
 
     # Define our new Node type
-    class ImmunioVarNode(jinja2.nodes.Expr):
+    class python_agentVarNode(jinja2.nodes.Expr):
         fields = ('node', 'var_definition_index', 'var_code')
 
     # And save our new node type into the module
-    jinja2.nodes.ImmunioVarNode = ImmunioVarNode
+    jinja2.nodes.python_agentVarNode = python_agentVarNode
 
     # Now unwrap __new__ to replace the previous 'disabled' version
-    jinja2.nodes.NodeType.__new__.immunio_unwrap()
+    jinja2.nodes.NodeType.__new__.python_agent_unwrap()
 
 
 def add_compiler_hooks(timer, xss_disabled):
     """
     MonkeyPatch the template parser and the code generator to inject
-    ImmunioVarNode wrappers around template variable expressions
+    python_agentVarNode wrappers around template variable expressions
     (anything wrapped in `{{ }}`) to collect data every time the
     template is rendered..
 
@@ -135,19 +135,19 @@ def add_compiler_hooks(timer, xss_disabled):
         """
         # Calculate the SHA1 of the template source code
         source_bytes = to_bytes(source, "utf8")
-        parser_self._immunio_template_sha = sha1(source_bytes).hexdigest()
+        parser_self._python_agent_template_sha = sha1(source_bytes).hexdigest()
 
         # Prefer the `name`, but fall back to <template> if nothings better
         # is available.
-        parser_self._immunio_template_name = name or filename or "<template>"
+        parser_self._python_agent_template_name = name or filename or "<template>"
 
         return orig(parser_self, environment, source, name, filename,
                     *args, **kwargs)
 
 
     # Add extra fields to the template node
-    jinja2.nodes.Template.fields = ('body', '_immunio_template_sha',
-                                    '_immunio_template_name')
+    jinja2.nodes.Template.fields = ('body', '_python_agent_template_sha',
+                                    '_python_agent_template_name')
 
 
     @monkeypatch("jinja2.parser.Parser.parse", timer=timer,
@@ -164,15 +164,15 @@ def add_compiler_hooks(timer, xss_disabled):
         we will inject these two extra variables into the generated source
         code.
 
-        We also reset the `_immunio_var_counter` so we can give each
+        We also reset the `_python_agent_var_counter` so we can give each
         template expression a unique id that stays constant between renders
         and doesn't change due to conditionals or loops.
         """
         # Initialize the variable definition counter to 0 for this template
-        parser_self._immunio_var_counter = 0
+        parser_self._python_agent_var_counter = 0
 
-        template_sha = parser_self._immunio_template_sha
-        template_name = parser_self._immunio_template_name
+        template_sha = parser_self._python_agent_template_sha
+        template_name = parser_self._python_agent_template_name
 
         # Everything below is a copy of the original, except `nodes.Template`
         # has two extra python_agent-specific arguments
@@ -198,34 +198,34 @@ def add_compiler_hooks(timer, xss_disabled):
         to grab all the code for a variable (including the begin and end tags
         themselves in case the defaults have been changed.
 
-        Each variable we see is appended to the `_immunio_variables` attribute
+        Each variable we see is appended to the `_python_agent_variables` attribute
         on the `TokenStream` instance created in this wrapper. This allows
         the variables to be accessed from the `_subparse` hook below.
         """
-        # There is a circular dependency here because `_immunio_token_iter`
+        # There is a circular dependency here because `_python_agent_token_iter`
         # is required to create our `TokenStream` below, but it also needs
         # to access the `TokenStream` as a holder for the extracted variables.
-        # This single-element list allows `_immunio_token_iter` to access the
+        # This single-element list allows `_python_agent_token_iter` to access the
         # `TokenStream` instance, even though it is defined AFTER.
         token_stream_mutable = [None]
 
-        def _immunio_token_iter(orig_iter):
+        def _python_agent_token_iter(orig_iter):
             """
             Observes each token as it is yielded and passes it through
             unchanged. Variable blocks `{{ }}` are captured and appened to
-            `TokenStream._immunio_variables` so that they can be accessed
+            `TokenStream._python_agent_variables` so that they can be accessed
             from the `_subparse` hook below.
             """
             current_var = None
 
             for lineno, token, value in orig_iter:
-                # If the `_immunio_inside_trans_block` flag is set, we're
+                # If the `_python_agent_inside_trans_block` flag is set, we're
                 # inside a `trans` template block. For those, we capture
                 # the full code of the translate block and treat it as a
                 # single variable.
                 if (token_stream_mutable[0] and
-                        token_stream_mutable[0]._immunio_inside_trans_block):
-                    token_stream_mutable[0]._immunio_variables[-1] += value
+                        token_stream_mutable[0]._python_agent_inside_trans_block):
+                    token_stream_mutable[0]._python_agent_variables[-1] += value
                 else:
                     # When not in a `trans` block, just capture variables
                     if token == "variable_begin":
@@ -235,7 +235,7 @@ def add_compiler_hooks(timer, xss_disabled):
                         current_var.append(value)
                         # Grab the code and reset `current_var` for the next one
                         code = "".join(current_var)
-                        token_stream_mutable[0]._immunio_variables.append(code)
+                        token_stream_mutable[0]._python_agent_variables.append(code)
                         current_var = None
 
                     elif current_var is not None:
@@ -248,17 +248,17 @@ def add_compiler_hooks(timer, xss_disabled):
         # Create a new token iterator for the source code
         stream = tokenize_self.tokeniter(source, name, filename, state)
         # Wrap the original iterator so we can observe the tokens flow by
-        wrapped_stream = _immunio_token_iter(stream)
+        wrapped_stream = _python_agent_token_iter(stream)
 
         # Create a `TokenStream` using our wrapped stream.
         token_stream_mutable[0] = jinja2.lexer.TokenStream(
             tokenize_self.wrap(wrapped_stream, name, filename), name, filename)
 
         # Initialize the flag for handling `trans` blocks
-        if not hasattr(token_stream_mutable[0], "_immunio_inside_trans_block"):
-            token_stream_mutable[0]._immunio_inside_trans_block = False
+        if not hasattr(token_stream_mutable[0], "_python_agent_inside_trans_block"):
+            token_stream_mutable[0]._python_agent_inside_trans_block = False
 
-        # This `TokenStream` is accessed by the `_immunio_token_iter` above.
+        # This `TokenStream` is accessed by the `_python_agent_token_iter` above.
         return token_stream_mutable[0]
 
 
@@ -269,7 +269,7 @@ def add_compiler_hooks(timer, xss_disabled):
         Here we are looking for the start and end of a `{% trans %}` block.
         The `trans` block is treated as a single variable node during
         rendering but it can internally have variable nodes. During the
-        `trans` block, we set the `_immunio_inside_trans_block` flag so
+        `trans` block, we set the `_python_agent_inside_trans_block` flag so
         the tokenizer hook above will capture the entire text of the block,
         to use as the `code` of the resulting variable.
 
@@ -277,18 +277,18 @@ def add_compiler_hooks(timer, xss_disabled):
         are the tokens that have already been seen by the tokenizer before
         this parse function is called.
         """
-        # Initialize the `_immunio_variables` code block with the tokens
+        # Initialize the `_python_agent_variables` code block with the tokens
         # already seen by this point.
         block_start_string = parser.environment.block_start_string
-        parser.stream._immunio_variables.append(block_start_string + " trans")
+        parser.stream._python_agent_variables.append(block_start_string + " trans")
 
-        # Now set the `_immunio_inside_trans_block` flag until the `trans`
+        # Now set the `_python_agent_inside_trans_block` flag until the `trans`
         # block is finished.
-        parser.stream._immunio_inside_trans_block = True
+        parser.stream._python_agent_inside_trans_block = True
         try:
             return orig(ext_self, parser)
         finally:
-            parser.stream._immunio_inside_trans_block = False
+            parser.stream._python_agent_inside_trans_block = False
 
 
     @monkeypatch("jinja2.parser.Parser.subparse", timer=timer,
@@ -296,21 +296,21 @@ def add_compiler_hooks(timer, xss_disabled):
     def _subparse(orig, parser_self, *args, **kwargs):
         """
         Here we loop through all the nodes in the subparse result and wrap
-        all expressions (except constants) with an ImmunioVarNode.
+        all expressions (except constants) with an python_agentVarNode.
 
-        The ImmunioVarNode doesn't render anything, but it allows us to
+        The python_agentVarNode doesn't render anything, but it allows us to
         pass through additional metadata during the rendering process.
         It also provides and overall group for more complex expressions
         that are inside a single {{ }}.
         """
         # During the call to subparse, the Lexer stream hook above will
         # be called. Ensure there is a place to store the data:
-        if not hasattr(parser_self.stream, "_immunio_variables"):
-            parser_self.stream._immunio_variables = []
+        if not hasattr(parser_self.stream, "_python_agent_variables"):
+            parser_self.stream._python_agent_variables = []
 
         # This may be a nested call to `_subparse` so ignore any variables that
         # have already been captured.
-        var_base_index = len(parser_self.stream._immunio_variables)
+        var_base_index = len(parser_self.stream._python_agent_variables)
 
         # Call original function
         nodes = orig(parser_self, *args, **kwargs)
@@ -325,16 +325,16 @@ def add_compiler_hooks(timer, xss_disabled):
                         # Get the code for this variable. Use the
                         # `var_base_index` so we only get variables from THIS
                         # nested _subparse.
-                        code = parser_self.stream._immunio_variables.pop(
+                        code = parser_self.stream._python_agent_variables.pop(
                             var_base_index)
-                        # Wrap the expression node with our ImmunioVarNode
+                        # Wrap the expression node with our python_agentVarNode
                         # Include the var counter and code as well.
-                        node.nodes[i] = jinja2.nodes.ImmunioVarNode(
-                            subnode, parser_self._immunio_var_counter, code)
-                        # Copy the internal lineno to the ImmunioVarNode.
+                        node.nodes[i] = jinja2.nodes.python_agentVarNode(
+                            subnode, parser_self._python_agent_var_counter, code)
+                        # Copy the internal lineno to the python_agentVarNode.
                         # Required to preserve debug_info for line numbers.
                         node.nodes[i].lineno = subnode.lineno
-                        parser_self._immunio_var_counter += 1
+                        parser_self._python_agent_var_counter += 1
         return nodes
 
 
@@ -349,12 +349,12 @@ def add_compiler_hooks(timer, xss_disabled):
         anywhere within the generated source code.
         """
         result = orig(codegen_self, node, *args, **kwargs)
-        # Add some special Immunio variables at the end
-        codegen_self.writeline("# Additional metadata added by IMMUNIO")
+        # Add some special python_agent variables at the end
+        codegen_self.writeline("# Additional metadata added by python_agent")
         codegen_self.writeline(
-            "_immunio_template_sha = '%s'" % node._immunio_template_sha)
+            "_python_agent_template_sha = '%s'" % node._python_agent_template_sha)
         codegen_self.writeline(
-            "_immunio_template_name = '%s'" % node._immunio_template_name)
+            "_python_agent_template_name = '%s'" % node._python_agent_template_name)
         return result
 
     @monkeypatch("jinja2.compiler.CodeGenerator.visit_Macro", timer=timer,
@@ -390,17 +390,17 @@ def add_compiler_hooks(timer, xss_disabled):
             name = "l_" + node.name
 
         # Add additional metadata as attributes of the macro function.
-        self.writeline("# Additional macro metadata added by IMMUNIO")
-        self.writeline("%s._immunio_name = \"%%s:MACRO:%s\""
-                       "%%(_immunio_template_name)" %
+        self.writeline("# Additional macro metadata added by python_agent")
+        self.writeline("%s._python_agent_name = \"%%s:MACRO:%s\""
+                       "%%(_python_agent_template_name)" %
                        (name, node.name))
-        self.writeline("%s._immunio_sha = \"%s\"" %
+        self.writeline("%s._python_agent_sha = \"%s\"" %
                        (name, macro_sum))
-        self.writeline("%s._immunio_filename = \"%s\"" %
+        self.writeline("%s._python_agent_filename = \"%s\"" %
                        (name, self.filename or "<template>"))
         return result
 
-    def visit_ImmunioVarNode(self, node, frame):
+    def visit_python_agentVarNode(self, node, frame):
         """
         Handle our completely custom node type when generating compiled code.
 
@@ -409,25 +409,25 @@ def add_compiler_hooks(timer, xss_disabled):
         provided by Jinja2 to work as expected - all the required info
         is part of the compiled source.
 
-        The `_immunio_var` method is defined below.
+        The `_python_agent_var` method is defined below.
         """
         # Use `context.environment` instead of just `environment` to ensure
-        # we get the _immunio_var set by the `new_context` wrapper above.
-        self.write("context.environment._immunio_var(context.environment, ")
+        # we get the _python_agent_var set by the `new_context` wrapper above.
+        self.write("context.environment._python_agent_var(context.environment, ")
         # Get the original code for our sub-node
         self.visit(node.node, frame)
         # Add the template sha and name from the global scope (added by
         # our custom Template node and patched visit_Template function).
         self.write(", ")
-        self.write("_immunio_template_sha, ")
-        self.write("_immunio_template_name, ")
+        self.write("_python_agent_template_sha, ")
+        self.write("_python_agent_template_name, ")
         # Bake in the variable index within the template, and the line number.
         self.write("%d, " % node.var_definition_index)
         self.write("%s, " % node.node.lineno)
         self.write("%r, " % node.var_code)
         self.write(')')
     # Add it to the CodeGenerator.
-    jinja2.compiler.CodeGenerator.visit_ImmunioVarNode = visit_ImmunioVarNode
+    jinja2.compiler.CodeGenerator.visit_python_agentVarNode = visit_python_agentVarNode
 
 
     @monkeypatch(jinja2.bccache.BytecodeCache, "get_source_checksum",
@@ -436,13 +436,13 @@ def add_compiler_hooks(timer, xss_disabled):
     def _get_source_checksum(orig, *args, **kwargs):
         """
         The goal here is to change the source checksum of everything in the
-        BytecodeCache while Immunio is running. Cached bytecode that was
-        generated without Immunio will not have the additional metadata that
+        BytecodeCache while python_agent is running. Cached bytecode that was
+        generated without python_agent will not have the additional metadata that
         we add using the patching above.
 
         By changing the checksum calculation, we ensure that existing cached
         bytecode will be invalidated, and the bytecode will be regenerated
-        with Immunio's additions. If Immunio is removed, the Immunio bytecode
+        with python_agent's additions. If python_agent is removed, the python_agent bytecode
         will become invalid, and things will go back the way they were.
         """
         original_checksum = orig(*args, **kwargs)
@@ -454,7 +454,7 @@ def add_compiler_hooks(timer, xss_disabled):
         # format has changed in the newer agent.
         new_checksum = sha1(
             to_bytes(original_checksum, "utf8") +
-            to_bytes("IMMUNIO_" + __version__, "utf8")).hexdigest()
+            to_bytes("python_agent_" + __version__, "utf8")).hexdigest()
 
         return new_checksum
 
@@ -482,8 +482,8 @@ def add_template_render_hook(run_hook, timer, xss_disabled):
         """
         template = orig(template_cls, environment, namespace, *args, **kwargs)
         # Grab our special python_agent data.
-        template_name = namespace["_immunio_template_name"]
-        template_sha = namespace["_immunio_template_sha"]
+        template_name = namespace["_python_agent_template_name"]
+        template_sha = namespace["_python_agent_template_sha"]
 
 
         @monkeypatch(template, "root_render_func", timer=timer,
@@ -506,14 +506,14 @@ def add_template_render_hook(run_hook, timer, xss_disabled):
                  report_name="plugin.jinja2.render.template_new_context")
     def _init(orig, *args, **kwargs):
         """
-        Ensure that the `_immunio_var()` method (defined below) is
+        Ensure that the `_python_agent_var()` method (defined below) is
         accessible from within our template code.
 
         We run this function whether XSS is enabled or not, to ensure that
-        `context.environment._immunio_var` is always accessible to templates.
+        `context.environment._python_agent_var` is always accessible to templates.
         """
         context = orig(*args, **kwargs)
-        context.environment._immunio_var = immunio_var
+        context.environment._python_agent_var = python_agent_var
         return context
 
 
@@ -529,9 +529,9 @@ def add_template_render_hook(run_hook, timer, xss_disabled):
         post_rendering, but when called directly it needs to be done
         here.
         """
-        name = getattr(macro_self, "_immunio_name", macro_self.name)
-        sha = getattr(macro_self, "_immunio_sha", None)
-        filename = getattr(macro_self, "_immunio_filename", None)
+        name = getattr(macro_self, "_python_agent_name", macro_self.name)
+        sha = getattr(macro_self, "_python_agent_sha", None)
+        filename = getattr(macro_self, "_python_agent_filename", None)
 
         # Anonymous `Macro` blocks are generated by the compiler for `call()`
         # blocks. Since `call()` blocks are anonymous, they can't be called
@@ -553,7 +553,7 @@ def add_template_render_hook(run_hook, timer, xss_disabled):
         return result
 
 
-    def immunio_var(environment, val, template_sha, filename,
+    def python_agent_var(environment, val, template_sha, filename,
                     var_definition_index, lineno, code):
         """
         This helper method is called once for every variable injected
@@ -562,9 +562,9 @@ def add_template_render_hook(run_hook, timer, xss_disabled):
         """
         # The `timer` param is allowed to be None. If it is None, use a
         # DummyContext() here instead to maintain the code structure.
-        immunio_var_timer = timer or DummyContext()
+        python_agent_var_timer = timer or DummyContext()
 
-        with immunio_var_timer("plugin.jinja2.render.immunio_var"):
+        with python_agent_var_timer("plugin.jinja2.render.python_agent_var"):
             # If XSS is disabled, short circuit this function and return the
             # original value unaltered.
             if xss_disabled():

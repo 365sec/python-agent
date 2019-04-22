@@ -7,7 +7,7 @@ from __future__ import (
 
 import sys
 
-from immunio.compat import get_builtins
+from python_agent.compat import get_builtins
 
 class ImportMonitor(object):
     """

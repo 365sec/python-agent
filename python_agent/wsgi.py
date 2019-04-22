@@ -11,10 +11,10 @@ import logging
 import sys
 from threading import local
 
-from immunio.compat import to_bytes, to_native_string
-from immunio.context import get_stack
-from immunio.exceptions import ImmunioBlockedError, ImmunioOverrideResponse
-from immunio.logger import log
+from python_agent.compat import to_bytes, to_native_string
+from python_agent.context import get_stack
+from python_agent.exceptions import python_agentBlockedError, python_agentOverrideResponse
+from python_agent.logger import log
 
 HOOKS_CALLED = ["http_request_start", "exception", "http_response_start",
         "http_response_body_chunk", "http_request_body_chunk"]
@@ -167,7 +167,7 @@ class WsgiRequest(object):
                 # Engine wants request body in single call, instead of
                 # chunk by chunk
                 data_len = int(environ.get("CONTENT_LENGTH", "0"))
-                self.wrapped_input.immunio_readall(data_len)
+                self.wrapped_input.python_agent_readall(data_len)
 
             # Call into original app
             self._output_gen = self._app(environ, self._wrapped_start_response)
@@ -192,11 +192,11 @@ class WsgiRequest(object):
                     type(self._output_gen), hasattr(self._output_gen, "close"),
                     output_file, debug_error)
 
-        except ImmunioBlockedError:
+        except python_agentBlockedError:
             # Block this request
             self._block_request()
 
-        except ImmunioOverrideResponse as exc:
+        except python_agentOverrideResponse as exc:
             # Block this request
             status, headers, body = exc.args
 
@@ -386,7 +386,7 @@ class WsgiRequest(object):
                     }, request=self._request)
                 yield body
 
-        except ImmunioBlockedError:
+        except python_agentBlockedError:
             # Kill current iterator
             # TODO Should we finish iterating through it first?
             self._output_gen.close()
@@ -395,7 +395,7 @@ class WsgiRequest(object):
             for chunk in self._output_gen:
                 yield chunk
 
-        except ImmunioOverrideResponse as exc:
+        except python_agentOverrideResponse as exc:
             # Kill current iterator
             # TODO Should we finish iterating through it first?
             self._output_gen.close()
@@ -466,7 +466,7 @@ class WsgiInputWrapper(object):
                 "buffered": buffered,
             }, request=self._request)
 
-    def immunio_readall(self, size):
+    def python_agent_readall(self, size):
         """
         Special method used by the agent to read the entire input body
         for inspection. After reading, the original wsgi.input is replaced

@@ -12,9 +12,9 @@ from threading import local
 import re
 
 
-from immunio.compat import to_bytes, string_types
-from immunio.logger import log
-from immunio.patcher import monkeypatch
+from python_agent.compat import to_bytes, string_types
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
 
 
 # Set name so plugin can be enabled and disabled.
@@ -22,7 +22,7 @@ NAME = "xss_django"
 HOOKS_CALLED = ["template_render_done"]
 
 
-# Match Immunio placeholders like {python_agent-var:0:1234}
+# Match python_agent placeholders like {python_agent-var:0:1234}
 PLACEHOLDER_INSIDE = r"python_agent-var:[0-9]+:[0-9a-fA-F]{4}"
 PLACEHOLDER_REGEX = re.compile(r"\{\/?" + PLACEHOLDER_INSIDE + "\}")
 
@@ -80,7 +80,7 @@ def hook_templates(run_hook, timer):
     VERSION = django.VERSION[0:2]
 
     if VERSION < V1_4 or VERSION > V1_11:
-        log.warn("Django version %(version)s not supported by IMMUNIO", {
+        log.warn("Django version %(version)s not supported by python_agent", {
             "version": ".".join([str(v) for v in VERSION]),
         })
         return
@@ -88,7 +88,7 @@ def hook_templates(run_hook, timer):
     # Patch the template loading/parsing
     patch_template_parsing(timer, VERSION)
 
-    # Patch some specific node types that need tweaks to work with Immunio's
+    # Patch some specific node types that need tweaks to work with python_agent's
     # tagged variable format.
     patch_filter_node(timer)
     patch_ifchanged_node(timer, VERSION)
@@ -149,9 +149,9 @@ def patch_template_rendering(run_hook, timer, VERSION):
             rendered = orig(template_self, *args, **kwargs)
 
             result = run_hook("template_render_done", {
-                "template_sha": template_self._immunio_template_sha,
-                "name": template_self._immunio_name,
-                "origin": template_self._immunio_origin,
+                "template_sha": template_self._python_agent_template_sha,
+                "name": template_self._python_agent_name,
+                "origin": template_self._python_agent_origin,
                 "nonce": render_context.nonce,
                 "vars": render_context.template_vars,
                 "rendered": rendered,
@@ -202,7 +202,7 @@ def patch_template_rendering(run_hook, timer, VERSION):
         EscapeData,
     )
 
-    def immunio_render_value_in_context(value, context):
+    def python_agent_render_value_in_context(value, context):
         """
         Custom version of `django.template.base.render_value_in_context` that
         behaves exactly like the original, except it adds an attribute to
@@ -223,19 +223,19 @@ def patch_template_rendering(run_hook, timer, VERSION):
                 isinstance(value, EscapeData)):
             if VERSION < V1_7:
                 escaped = escape(value)
-                escaped._immunio_marked_safe = False
+                escaped._python_agent_marked_safe = False
             else:
                 # v1.7 and newer consider objects with `__html__` as safe.
                 if hasattr(value, '__html__'):
                     escaped = SafeText(value.__html__())
-                    escaped._immunio_marked_safe = True
+                    escaped._python_agent_marked_safe = True
                 else:
                     escaped = escape(value)
-                    escaped._immunio_marked_safe = False
+                    escaped._python_agent_marked_safe = False
             return escaped
         else:
             escaped = SafeText(value)
-            escaped._immunio_marked_safe = True
+            escaped._python_agent_marked_safe = True
             return escaped
 
 
@@ -266,18 +266,18 @@ def patch_template_rendering(run_hook, timer, VERSION):
             ## START Duplicated `render()` code.
             try:
                 output = node_self.filter_expression.resolve(context)
-                rendered = immunio_render_value_in_context(output, context)
+                rendered = python_agent_render_value_in_context(output, context)
             except UnicodeDecodeError:
                 # Unicode conversion can fail sometimes for reasons out of our
                 # control (e.g. exception rendering). In that case, we fail
                 # quietly.
                 rendered = SafeText('')
-                rendered._immunio_marked_safe = True
+                rendered._python_agent_marked_safe = True
             ## FINISH Duplicated `render()` code.
 
-            # Get attribute added by `immunio_render_value_in_context()`
-            marked_safe = rendered._immunio_marked_safe
-            delattr(rendered, "_immunio_marked_safe")
+            # Get attribute added by `python_agent_render_value_in_context()`
+            marked_safe = rendered._python_agent_marked_safe
+            delattr(rendered, "_python_agent_marked_safe")
 
             # Get current render context
             render_context = local_storage.render_context_stack[-1]
@@ -296,13 +296,13 @@ def patch_template_rendering(run_hook, timer, VERSION):
 
             # Record the var data
             render_context.template_vars[var_index] = {
-                "template_sha": node_self._immunio_template_sha,
-                "file": node_self._immunio_file_name,
-                "template_id": node_self._immunio_template_var_id,
+                "template_sha": node_self._python_agent_template_sha,
+                "file": node_self._python_agent_file_name,
+                "template_id": node_self._python_agent_template_var_id,
                 "marked_safe": marked_safe,
                 "nonce": render_context.nonce,
-                "line": node_self._immunio_lineno,
-                "code": node_self._immunio_code,
+                "line": node_self._python_agent_lineno,
+                "code": node_self._python_agent_code,
             }
 
             # Tag the rendered value
@@ -354,14 +354,14 @@ def patch_template_parsing(timer, VERSION):
                  report_name="plugin.django.xss.Template_init")
     def _template_init(orig, template_self, template_string, *args, **kwargs):
         # Create a placeholder for the template definition id
-        template_self._immunio_template_var_index = 0
+        template_self._python_agent_template_var_index = 0
 
         # Compute SHA of template string
-        template_self._immunio_template_sha = sha1(
+        template_self._python_agent_template_sha = sha1(
                 to_bytes(template_string, "utf8")).hexdigest()
 
         # Initialize the template var definition index for this template
-        template_self._immunio_template_var_index = 0
+        template_self._python_agent_template_var_index = 0
 
         # Extract name if present
         name = None
@@ -370,7 +370,7 @@ def patch_template_parsing(timer, VERSION):
         if "name" in kwargs:
             name = kwargs["name"]
         # If no name is available, default to `<template>`
-        template_self._immunio_name = name or "<template>"
+        template_self._python_agent_name = name or "<template>"
 
         # Extract origin if present
         origin = None
@@ -388,7 +388,7 @@ def patch_template_parsing(timer, VERSION):
                 origin = parsing_local_storage.last_captured_origin
                 parsing_local_storage.last_captured_origin = None
         # If no origin is available, default to `<template>`
-        template_self._immunio_origin = origin or "<template>"
+        template_self._python_agent_origin = origin or "<template>"
 
         if not hasattr(parsing_local_storage, "template_init_stack"):
             parsing_local_storage.template_init_stack = []
@@ -414,16 +414,16 @@ def patch_template_parsing(timer, VERSION):
             template = parsing_local_storage.template_init_stack[-1]
 
             # Assign a unique index for this variable node
-            node._immunio_template_var_id = str(
-                template._immunio_template_var_index)
-            template._immunio_template_var_index += 1
+            node._python_agent_template_var_id = str(
+                template._python_agent_template_var_index)
+            template._python_agent_template_var_index += 1
 
             # Save details about this variable on the node itself.
-            node._immunio_lineno = token.lineno
-            node._immunio_file_name = template._immunio_name
-            node._immunio_template_sha = template._immunio_template_sha
+            node._python_agent_lineno = token.lineno
+            node._python_agent_file_name = template._python_agent_name
+            node._python_agent_template_sha = template._python_agent_template_sha
 
-            node._immunio_code = "%s %s %s" % (
+            node._python_agent_code = "%s %s %s" % (
                 VARIABLE_TAG_START, token.contents, VARIABLE_TAG_END)
         return orig(parser_self, nodelist, node, token)
 
@@ -433,7 +433,7 @@ def patch_filter_node(timer):
     The FilterNode allows template authors to apply a filter to an
     entire block of template output. This causes some trouble because the
     block will likely contain some intermediate rendered output which may
-    contain some Immunio markup tags like `{python_agent-var:1:1234}`.
+    contain some python_agent markup tags like `{python_agent-var:1:1234}`.
 
     These tags interfere with filters like "FirstUpper" that capatilize the
     first letter in the block. The built-in cases operate on the first or
@@ -463,7 +463,7 @@ def patch_filter_node(timer):
             pre = "{%s}" % pre
             post = "{/%s}" % post
 
-        # Run the filter, and add back the Immunio tags if present. Note that
+        # Run the filter, and add back the python_agent tags if present. Note that
         # push only returns a context manager after Django 1.4.
         context_dir = context.push()
         try:
@@ -476,11 +476,11 @@ def patch_filter_node(timer):
 def patch_ifchanged_node(timer, VERSION):
     """
     The IfChanged block only outputs its contents if the contents are
-    different then the last time through the loop. When we add our Immunio
+    different then the last time through the loop. When we add our python_agent
     tags we break this behaviour because we always increment the var index
     on every insertion, so the content will ALWAYS be different.
 
-    To fix this, we remove all the Immunio tags from the values being
+    To fix this, we remove all the python_agent tags from the values being
     compared, but still include them in the actual output.
     """
     from django.template.base import VariableDoesNotExist
@@ -499,14 +499,14 @@ def patch_ifchanged_node(timer, VERSION):
                     compare_to = [
                         var.resolve(context, True)
                         for var in node_self._varlist]
-                    # REMOVE THE IMMUNIO TAGS FROM compare_to VALUES
+                    # REMOVE THE python_agent TAGS FROM compare_to VALUES
                     compare_to = [
                         PLACEHOLDER_REGEX.sub("", x)
                         if isinstance(x, string_types)
                         else x for x in compare_to]
                 else:
                     compare_to = node_self.nodelist_true.render(context)
-                    # REMOVE THE IMMUNIO TAGS FROM compare_to VALUE
+                    # REMOVE THE python_agent TAGS FROM compare_to VALUE
                     compare_to = (
                         PLACEHOLDER_REGEX.sub("", compare_to)
                         if isinstance(compare_to, string_types) else compare_to)
@@ -538,7 +538,7 @@ def patch_ifchanged_node(timer, VERSION):
                     compare_to = [
                         var.resolve(context, True)
                         for var in node_self._varlist]
-                    # REMOVE THE IMMUNIO TAGS FROM compare_to VALUES
+                    # REMOVE THE python_agent TAGS FROM compare_to VALUES
                     compare_to = [
                         PLACEHOLDER_REGEX.sub("", x)
                         if isinstance(x, string_types)
@@ -548,7 +548,7 @@ def patch_ifchanged_node(timer, VERSION):
                     # compares the rendered output.
                     compare_to = nodelist_true_output = (
                         node_self.nodelist_true.render(context))
-                    # REMOVE THE IMMUNIO TAGS FROM compare_to VALUE
+                    # REMOVE THE python_agent TAGS FROM compare_to VALUE
                     compare_to = (
                         PLACEHOLDER_REGEX.sub("", compare_to)
                         if isinstance(compare_to, string_types) else compare_to)

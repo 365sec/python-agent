@@ -7,10 +7,10 @@ from __future__ import (
 import os
 import sys
 
-from immunio.compat import get_builtins
-from immunio.context import get_context
-from immunio.logger import log
-from immunio.patcher import monkeypatch
+from python_agent.compat import get_builtins
+from python_agent.context import get_context
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
 
 # Set plugin name so it can be enabled and disabled.
 NAME = "file_io"

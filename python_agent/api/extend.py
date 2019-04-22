@@ -8,9 +8,9 @@ from __future__ import (
 from numbers import Number
 import re
 
-from immunio.compat import string_types, get_iteritems
-from immunio.logger import log
-from immunio.singleton import run_hook
+from python_agent.compat import string_types, get_iteritems
+from python_agent.logger import log
+from python_agent.singleton import run_hook
 
 
 # Pattern of allowed characters in event names and metadata names.
@@ -19,7 +19,7 @@ SLUG_PATTERN = "^[a-zA-Z0-9_-]+$"
 
 def custom_event(event_type, metadata=None):
     """
-    Report a custom event to IMMUNIO. The reported event can be used to
+    Report a custom event to python_agent. The reported event can be used to
     indicate a threat, or can be used to limit rates.
     """
     # `event_type` must be a string
@@ -68,7 +68,7 @@ def custom_event(event_type, metadata=None):
 
 def custom_threat(threat_name, message, metadata=None):
     """
-    Inform Immunio of custom threat for your app.
+    Inform python_agent of custom threat for your app.
     """
     if not isinstance(threat_name, string_types):
         raise ValueError(

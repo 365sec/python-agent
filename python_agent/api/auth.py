@@ -6,8 +6,8 @@ from __future__ import (
 )
 
 
-from immunio.logger import log
-from immunio.singleton import run_hook
+from python_agent.logger import log
+from python_agent.singleton import run_hook
 
 
 def _parse_auth_args(user_id, username, email, other_meta=None):
@@ -27,7 +27,7 @@ def _parse_auth_args(user_id, username, email, other_meta=None):
 
 def set_current_user(user_id=None, username=None, email=None):
     """
-    Inform Immunio of the current user for the current request. This function
+    Inform python_agent of the current user for the current request. This function
     should be called for every request made to the App.
 
     The `user_id` should be a unique un-changing reference for the user.
@@ -48,7 +48,7 @@ def set_current_user(user_id=None, username=None, email=None):
 
 def login_success(user_id=None, username=None, email=None):
     """
-    Inform Immunio of a successful login.  This function should be called
+    Inform python_agent of a successful login.  This function should be called
     during the request which actually logs in an existing user.
     """
     log.debug("API auth.login_success "
@@ -63,7 +63,7 @@ def login_success(user_id=None, username=None, email=None):
 
 def login_failure(user_id=None, username=None, email=None, reason=None):
     """
-    Inform Immunio of a failed login attempt.
+    Inform python_agent of a failed login attempt.
     """
     log.debug("API auth.login_failure "
               "user_id=%(user_id)s username=%(username)s email=%(email)s "
@@ -82,7 +82,7 @@ def login_failure(user_id=None, username=None, email=None, reason=None):
 
 def password_reset_request_accepted(user_id=None, username=None, email=None):
     """
-    Inform Immunio of a request to reset a user's password that was
+    Inform python_agent of a request to reset a user's password that was
     accepted by your system. Call this if someone requests a password reset
     and your system found a matching account and initiated the reset.
     """
@@ -99,7 +99,7 @@ def password_reset_request_accepted(user_id=None, username=None, email=None):
 
 def password_reset_request_failed(search_value):
     """
-    Inform Immunio of a request to reset a user's password that did not
+    Inform python_agent of a request to reset a user's password that did not
     match a known account.
     """
     log.debug("API auth.password_reset_request_failed "
@@ -114,7 +114,7 @@ def password_reset_request_failed(search_value):
 
 def account_created(user_id=None, username=None, email=None):
     """
-    Inform Immunio of a newly created account.
+    Inform python_agent of a newly created account.
     """
     log.debug("API auth.account_created "
               "user_id=%(user_id)s username=%(username)s email=%(email)s" % {

@@ -10,10 +10,10 @@ from functools import wraps
 from itertools import tee
 from uuid import uuid4
 
-from immunio.compat import to_unicode, get_iteritems
-from immunio.context import get_context
-from immunio.exceptions import ImmunioBlockedError
-from immunio.logger import log
+from python_agent.compat import to_unicode, get_iteritems
+from python_agent.context import get_context
+from python_agent.exceptions import python_agentBlockedError
+from python_agent.logger import log
 
 
 def get_additional_data(agent):
@@ -167,7 +167,7 @@ class ConnectionWrapper(object):
         hook_result = self._run_hook("sql", meta)
 
         if not hook_result.get("allow", True):
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         # Some versions of psycopg2 are picky about the value of the default
         # params argument. To avoid any issues, don't pass through params=None.
@@ -195,7 +195,7 @@ class ConnectionWrapper(object):
             hook_result = self._run_hook("sql", meta)
 
             if not hook_result.get("allow", True):
-                raise ImmunioBlockedError()
+                raise python_agentBlockedError()
 
         return self._conn.executemany(sql, params_list)
 
@@ -215,7 +215,7 @@ class ConnectionWrapper(object):
         hook_result = self._run_hook("sql", meta)
 
         if not hook_result.get("allow", True):
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         return self._conn.executescript(sql_script)
 
@@ -311,7 +311,7 @@ class CursorWrapper(object):
         hook_result = self._run_hook("sql", meta)
 
         if not hook_result.get("allow", True):
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         # Some versions of psycopg2 are picky about the value of the default
         # params argument. To avoid any issues, don't pass through params=None.
@@ -338,7 +338,7 @@ class CursorWrapper(object):
         hook_result = self._run_hook("sql", meta)
 
         if not hook_result.get("allow", True):
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         return self._cursor.executemany(sql, params)
 
@@ -358,7 +358,7 @@ class CursorWrapper(object):
         hook_result = self._run_hook("sql", meta)
 
         if not hook_result.get("allow", True):
-            raise ImmunioBlockedError()
+            raise python_agentBlockedError()
 
         return self._cursor.executescript(sql_script)
 

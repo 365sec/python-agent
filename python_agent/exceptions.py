@@ -6,7 +6,7 @@ from __future__ import (
 )
 
 
-class ImmunioBlockedError(BaseException):
+class python_agentBlockedError(BaseException):
     """
     Raised by wsgi wrapper code when the request should be blocked. This is
     caught by the wsgi wrapper higher up the stack where it has more context
@@ -17,7 +17,7 @@ class ImmunioBlockedError(BaseException):
     """
 
 
-class ImmunioOverrideResponse(BaseException):
+class python_agentOverrideResponse(BaseException):
     """
     Raised by the agent to override the normal response for this request
     replace it with a new response instead.

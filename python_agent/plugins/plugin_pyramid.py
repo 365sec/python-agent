@@ -8,9 +8,9 @@ from __future__ import (
 import hashlib
 import pkg_resources
 
-from immunio.compat import get_func_defaults, set_func_defaults, to_bytes
-from immunio.logger import log
-from immunio.patcher import monkeypatch
+from python_agent.compat import get_func_defaults, set_func_defaults, to_bytes
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
 
 
 # Set name so plugin can be enabled and disabled.
@@ -99,11 +99,11 @@ def add_handle_request_hook(run_hook, get_agent_func, timer):
         # Wrap anything on the app router while we have it.
         wrap_pyramid_router(run_hook, app)
 
-        # Wrap the WSGI app object with Immunio.
+        # Wrap the WSGI app object with python_agent.
         # If we don't have a `get_agent_func()` defined the app will be
         # wrapped elsewhere.
         if get_agent_func:
-            # Get or create the Immunio Agent singleton
+            # Get or create the python_agent Agent singleton
             agent = get_agent_func()
             # Do the wrapping
             app = agent.wrap_wsgi_app(app)

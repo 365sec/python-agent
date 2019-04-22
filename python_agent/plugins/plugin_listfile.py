@@ -11,10 +11,10 @@ except ImportError:
     PATCH_POPEN2 = False
 
 from functools import partial
-from immunio.compat import string_types
-from immunio.context import get_context
-from immunio.logger import log
-from immunio.patcher import monkeypatch
+from python_agent.compat import string_types
+from python_agent.context import get_context
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
 
 
 # Set plugin name so it can be enabled and disabled.
@@ -52,7 +52,7 @@ def hook_os_listdir(run_hook, timer):
             "path": args[:1], # just send command
             # "information": kwargs,
             # "stack": stack,
-            "context_key": loose_context,
+            # "context_key": loose_context,
             "realpath": os.path.realpath(args[0])
         })
         return orig_os_system(*args, **kwargs)

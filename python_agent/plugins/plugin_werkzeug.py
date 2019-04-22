@@ -5,7 +5,7 @@ from __future__ import (
     unicode_literals,
 )
 
-from immunio.logger import log
+from python_agent.logger import log
 
 
 NAME = "werkzeug"

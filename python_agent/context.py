@@ -13,9 +13,9 @@ import os
 import sys
 import hashlib
 
-from immunio.compat import to_bytes
-from immunio.logger import log
-from immunio.deps import cachetools
+from python_agent.compat import to_bytes
+from python_agent.logger import log
+from python_agent.deps import cachetools
 
 
 THIS_DIR = os.path.dirname(__file__)
@@ -115,24 +115,24 @@ def get_context(additional_data=None, log_context_data=False, offset=0):
     return strict_context, loose_context, stack
 
 
-def _is_immunio_frame(frame):
+def _is_python_agent_frame(frame):
     """
-    Check if this frame is from the Immunio agent. We do the quick path
+    Check if this frame is from the python_agent agent. We do the quick path
     test here to exclude most customer files so they don't fill up the
-    LFU cache on `_is_immunio_agent_file()` below.
+    LFU cache on `_is_python_agent_agent_file()` below.
     """
     if "/python_agent/" not in frame[0]:
         return False
-    return _is_immunio_agent_file(frame[0])
+    return _is_python_agent_agent_file(frame[0])
 
 
 @cachetools.func.lfu_cache(maxsize=100)
-def _is_immunio_agent_file(filename):
+def _is_python_agent_agent_file(filename):
     """
-    Check if the given file is part of the Immunio agent. Cache the result
+    Check if the given file is part of the python_agent agent. Cache the result
     to avoid frequent filesystem operations for `os.path.exists()`.
 
-    This function is split from `_is_immunio_frame()` above to allow use of
+    This function is split from `_is_python_agent_frame()` above to allow use of
     the cache decorator.
     """
     path_part = filename.split("/python_agent/")[-1]
@@ -161,8 +161,8 @@ def _build_context(stack, log_context_data, offset):
         if "/python_agent/wsgi" in frame[0] and frame[2] == "handle_request":
             break
 
-        # Skip any IMMUNIO frames
-        if _is_immunio_frame(frame):
+        # Skip any python_agent frames
+        if _is_python_agent_frame(frame):
             continue
 
         # Unpack frame

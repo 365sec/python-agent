@@ -5,7 +5,7 @@ from __future__ import (
     unicode_literals,
 )
 
-from immunio.plugins.dbapi2_helper import (
+from python_agent.plugins.dbapi2_helper import (
     wrap_connect,
     ConnectionWrapper,
     )

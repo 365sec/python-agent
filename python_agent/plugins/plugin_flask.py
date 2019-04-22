@@ -5,9 +5,9 @@ from __future__ import (
     unicode_literals,
 )
 
-from immunio.logger import log
-from immunio.patcher import monkeypatch
-from immunio.context import get_context
+from python_agent.logger import log
+from python_agent.patcher import monkeypatch
+from python_agent.context import get_context
 
 
 # Set name so plugin can be enabled and disabled.
@@ -89,14 +89,14 @@ def hook_flask_app(run_hook, get_agent_func, timer):
     # overridden normally. Instead, we have to override it on the class
     # to get it to check an instance method to allow us to override it
     # from the __init__ monkeypatch below.
-    def immunio_call(self, *args, **kwargs):
+    def python_agent_call(self, *args, **kwargs):
         """
         Simply duplicate the behaviour of the original __call__ and proxy
         everything to the internal `wsgi_app` method. This stub will be
         wrapped by the Agent during the `__init__` monkeypatch below.
         """
         return self.wsgi_app(*args, **kwargs)
-    flask.Flask._immunio_call = immunio_call
+    flask.Flask._python_agent_call = python_agent_call
 
     @monkeypatch(flask.Flask, "__call__", timer=timer,
                  report_name="plugin.flask.app.__call__")
@@ -104,24 +104,24 @@ def hook_flask_app(run_hook, get_agent_func, timer):
         """
         We patch __call__ here because it is impossible to patch it on a
         per-instance basis. This mokeypatch on the class simply proxies
-        through the stub `_immunio_call` defined above. Since the
-        `_immunio_call` method is "normal", it can be overridden on the
+        through the stub `_python_agent_call` defined above. Since the
+        `_python_agent_call` method is "normal", it can be overridden on the
         Flask instance during the __init__ monkeypatch below.
         """
         log.debug("Call to patched __call__(%(args)s, %(kwargs)s)", {
             "args": args,
             "kwargs": kwargs,
         })
-        # Always call the immunio_call stub defined above. Since the stub
+        # Always call the python_agent_call stub defined above. Since the stub
         # is not a special method, it can be overridden on the instance below.
-        return flask_self._immunio_call(*args, **kwargs)
+        return flask_self._python_agent_call(*args, **kwargs)
 
 
     @monkeypatch(flask.Flask, "__init__", timer=timer,
                  report_name="plugin.flask.app.__init__")
     def _flask_init(orig, flask_self, *args, **kwargs):
         """
-        Here we patch the `__call__` method (via the _immunio_call stub) of
+        Here we patch the `__call__` method (via the _python_agent_call stub) of
         every new Flask app. This ensures that when the app object is used
         as a WSGI callable, we already have it wrapped.
         """
@@ -132,11 +132,11 @@ def hook_flask_app(run_hook, get_agent_func, timer):
         # Get the WSGI app (__init__ always returns None)
         orig(flask_self, *args, **kwargs)
 
-        # Get or create the Immunio Agent singleton
+        # Get or create the python_agent Agent singleton
         agent = get_agent_func()
 
-        # Wrap the Flask app __call__ method (via _immunio_call) with Immunio.
-        flask_self._immunio_call = agent.wrap_wsgi_app(flask_self._immunio_call)
+        # Wrap the Flask app __call__ method (via _python_agent_call) with python_agent.
+        flask_self._python_agent_call = agent.wrap_wsgi_app(flask_self._python_agent_call)
 
 
 def hook_flask_request_context(run_hook, timer=None):

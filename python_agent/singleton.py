@@ -49,14 +49,14 @@ def run_hook(hook_name, meta):
     `run_hook`.
     """
     agent = get_agent()
-    return agent.run_hook("immunio_api", hook_name, meta)
+    return agent.run_hook("python_agent_api", hook_name, meta)
 
 
 def get_config():
     """
     Load the Agent Config into a singleton.
     """
-    from immunio.config import Config
+    from python_agent.config import Config
     global _global_config
 
     if not _global_config:
@@ -68,7 +68,7 @@ def get_plugin_manager():
     """
     Load PluginManager into a singleton and actually do the MonkeyPatching.
     """
-    from immunio.plugin_manager import PluginManager
+    from python_agent.plugin_manager import PluginManager
     global _global_plugin_manager
 
     if not _global_plugin_manager:
@@ -82,7 +82,7 @@ def get_agent(create_if_required=True):
     Shortcut function for accessing a singleton agent.
     """
     # Import inside function to avoid circular import.
-    from immunio import agent
+    from python_agent import agent
     global _global_agent
     if not _global_agent and create_if_required:
         _global_agent = agent.Agent(get_config(), get_plugin_manager())
@@ -110,6 +110,6 @@ def start():
 
     生成的wsgi应用程序。在大多数情况下，您应该只是
 
-    “导入immunio。从应用程序输入文件的顶部开始。
+    “导入python_agent。从应用程序输入文件的顶部开始。
     """
     return get_agent()

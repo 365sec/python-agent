@@ -5,26 +5,26 @@ from __future__ import (
     unicode_literals,
 )
 
-from immunio.logger import log
-from immunio.util import DummyContext
-from immunio.plugins import FAILED, PENDING, LOADED, DISABLED
-import immunio.plugins.plugin_django
-import immunio.plugins.plugin_django_xss
-import immunio.plugins.plugin_fileio
-import immunio.plugins.plugin_flask
-import immunio.plugins.plugin_jinja2
-import immunio.plugins.plugin_mysqldb
-import immunio.plugins.plugin_psycopg2
-import immunio.plugins.plugin_pymssql
-import immunio.plugins.plugin_pymysql
-import immunio.plugins.plugin_pyramid
-import immunio.plugins.plugin_pysqlite2
-import immunio.plugins.plugin_shell
-import immunio.plugins.plugin_sqlite3
-import immunio.plugins.plugin_werkzeug
+from python_agent.logger import log
+from python_agent.util import DummyContext
+from python_agent.plugins import FAILED, PENDING, LOADED, DISABLED
+import python_agent.plugins.plugin_django
+import python_agent.plugins.plugin_django_xss
+import python_agent.plugins.plugin_fileio
+import python_agent.plugins.plugin_flask
+import python_agent.plugins.plugin_jinja2
+import python_agent.plugins.plugin_mysqldb
+import python_agent.plugins.plugin_psycopg2
+import python_agent.plugins.plugin_pymssql
+import python_agent.plugins.plugin_pymysql
+import python_agent.plugins.plugin_pyramid
+import python_agent.plugins.plugin_pysqlite2
+import python_agent.plugins.plugin_shell
+import python_agent.plugins.plugin_sqlite3
+import python_agent.plugins.plugin_werkzeug
 
-import immunio.plugins.plugin_listfile
-import immunio.plugins.piugin_serialization
+import python_agent.plugins.plugin_listfile
+import python_agent.plugins.piugin_serialization
 
 
 
@@ -153,25 +153,25 @@ class PluginManager(object):
         """
         # The order here is significant.
         # Patch low-level calls first
-        self.register(immunio.plugins.plugin_fileio)
-        self.register(immunio.plugins.plugin_shell)
+        self.register(python_agent.plugins.plugin_fileio)
+        self.register(python_agent.plugins.plugin_shell)
         # Patch database drivers next since they are used by frameworks.
-        self.register(immunio.plugins.plugin_sqlite3)
-        self.register(immunio.plugins.plugin_pysqlite2)
-        self.register(immunio.plugins.plugin_mysqldb)
-        self.register(immunio.plugins.plugin_psycopg2)
-        self.register(immunio.plugins.plugin_pymssql)
-        self.register(immunio.plugins.plugin_pymysql)
+        self.register(python_agent.plugins.plugin_sqlite3)
+        self.register(python_agent.plugins.plugin_pysqlite2)
+        self.register(python_agent.plugins.plugin_mysqldb)
+        self.register(python_agent.plugins.plugin_psycopg2)
+        self.register(python_agent.plugins.plugin_pymssql)
+        self.register(python_agent.plugins.plugin_pymysql)
         # Patch support libraries used by frameworks
-        self.register(immunio.plugins.plugin_jinja2)
-        self.register(immunio.plugins.plugin_django_xss)
+        self.register(python_agent.plugins.plugin_jinja2)
+        self.register(python_agent.plugins.plugin_django_xss)
         # Patch web frameworks next.
-        self.register(immunio.plugins.plugin_django)
-        self.register(immunio.plugins.plugin_flask)
-        self.register(immunio.plugins.plugin_werkzeug)
-        self.register(immunio.plugins.plugin_pyramid)
-        self.register(immunio.plugins.plugin_listfile)
-        self.register(immunio.plugins.piugin_serialization)
+        self.register(python_agent.plugins.plugin_django)
+        self.register(python_agent.plugins.plugin_flask)
+        self.register(python_agent.plugins.plugin_werkzeug)
+        self.register(python_agent.plugins.plugin_pyramid)
+        self.register(python_agent.plugins.plugin_listfile)
+        self.register(python_agent.plugins.piugin_serialization)
 
     def register(self, plugin_module):
 

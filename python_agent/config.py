@@ -13,13 +13,13 @@ import errno
 import io
 import os
 
-from immunio.compat import string_types, to_bytes
-from immunio.exceptions import ConfigError
-from immunio.logger import log
+from python_agent.compat import string_types, to_bytes
+from python_agent.exceptions import ConfigError
+from python_agent.logger import log
 
 
 CONFIG_FILENAME = "./python_agent.ini"
-IMMUNIO_SECTION_NAME = "python_agent"
+python_agent_SECTION_NAME = "python_agent"
 
 class Config(object):
     def __init__(self, defaults=None, autoload=True):
@@ -92,7 +92,7 @@ class Config(object):
                     # re-raise all exceptions except file-not-found
                     if exc.errno != errno.ENOENT:
                         raise ConfigError(
-                            "Error reading IMMUNIO config file '%s': %s" % (
+                            "Error reading python_agent config file '%s': %s" % (
                             filename, exc))
         # No config file found, return None
         return None, None
@@ -107,15 +107,15 @@ class Config(object):
         fp = io.StringIO(content)
         parser = SafeConfigParser()
         parser.readfp(fp, filename)
-        if parser.has_section(IMMUNIO_SECTION_NAME):
-            self._config.update(dict(parser.items(IMMUNIO_SECTION_NAME)))
+        if parser.has_section(python_agent_SECTION_NAME):
+            self._config.update(dict(parser.items(python_agent_SECTION_NAME)))
 
     def get(self, name, default=None, datatype=None):
         """
         Get a config value. Precedence is first environment variable,
         then config file, then fall back to the default.
         """
-        environ_name = "IMMUNIO_%s" % name.upper()
+        environ_name = "python_agent_%s" % name.upper()
 
         if environ_name in os.environ:
             str_value = os.environ[environ_name]

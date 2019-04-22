@@ -11,8 +11,8 @@ import sys
 from types import MethodType
 
 
-from immunio.util import DummyContext
-from immunio.compat import string_types
+from python_agent.util import DummyContext
+from python_agent.compat import string_types
 
 
 # Global store of all current monkeypatches. Used by `unwrap_all()` to remove
@@ -29,7 +29,7 @@ def unwrap_all():
     # Loop through ever patch and unwrap it. Converted to a list since doing
     # the unpatching will mutate the `_PATCHES` dict.
     for _, wrapped in list(_PATCHES.items()):
-        wrapped.immunio_unwrap()
+        wrapped.python_agent_unwrap()
 
 
 def _is_static_method(base, target):
@@ -146,8 +146,8 @@ def monkeypatch(target_or_base, target=None, timer=None, report_name=None,
 
         # If we're already wrapped the original before, don't double-wrap it,
         # wrap the original version instead.
-        if hasattr(original, "_immunio_original"):
-            original = original._immunio_original
+        if hasattr(original, "_python_agent_original"):
+            original = original._python_agent_original
 
         # Define the new replacement function. The replacement just calls
         # the decorated function with the additional `orig` argument. The
@@ -198,9 +198,9 @@ def monkeypatch(target_or_base, target=None, timer=None, report_name=None,
                                                  parent_duration)
                         return wrapped(orig, *args, **kwargs)
 
-        # Add the `_immunio_original` function attribute so we keep a reference
+        # Add the `_python_agent_original` function attribute so we keep a reference
         # to the unwrapped version of the function.
-        setattr(new_wrapped, "_immunio_original", original)
+        setattr(new_wrapped, "_python_agent_original", original)
 
         # Copy any method level properties to the wrapper. Django after 1.8 uses
         # the values `queryset_only` and `alters_data` for the creation of
@@ -211,9 +211,9 @@ def monkeypatch(target_or_base, target=None, timer=None, report_name=None,
 
         def unwrap():
             """
-            Remove the Immunio wrapping from this function.
+            Remove the python_agent wrapping from this function.
             """
-            orig = getattr(base, target)._immunio_original
+            orig = getattr(base, target)._python_agent_original
             # Remove the reference from the global patches dict
             del _PATCHES[orig]
             # Add back the required decorators
@@ -223,9 +223,9 @@ def monkeypatch(target_or_base, target=None, timer=None, report_name=None,
                 orig = staticmethod(orig)
             setattr(base, target, orig)
 
-        # Add an `immunio_unwrap()` attribute to the wrapped function to allow
+        # Add an `python_agent_unwrap()` attribute to the wrapped function to allow
         # our wrapping to be "undone".
-        setattr(new_wrapped, "immunio_unwrap", unwrap)
+        setattr(new_wrapped, "python_agent_unwrap", unwrap)
         # Save a reference to this wrapped function so we can unwrap it later.
         _PATCHES[original] = new_wrapped
 
